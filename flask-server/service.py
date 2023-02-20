@@ -104,30 +104,32 @@ positive_adjectives = [
     '우수한',
     '완벽한']
 
-count_list = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 136, 153, 171, 190, 210, 231, 253, 276, 300, 325, 351, 378, 406, 435, 465, 496, 528, 561, 595, 630, 666, 703, 741, 780, 820, 861, 903, 946, 990, 1035, 1081, 1128, 1176, 1225, 1275, 1326, 1378, 1431, 1485, 1540, 1596, 1653, 1711, 1770, 1830, 1891, 1953, 2016, 2080, 2145, 2211, 2278, 2346, 2415, 2485, 2556, 2628, 2701, 2775, 2850, 2926, 3003, 3081, 3160, 3240, 3321, 3403, 3486, 3570, 3655, 3741, 3828, 3916, 4005, 4095, 4186, 4278, 4371, 4465, 4560, 4656, 4753, 4851, 4950, 5050]
+count_list = [1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 136, 153, 171, 190, 210, 231, 253, 276, 300,
+              325, 351, 378, 406, 435, 465, 496, 528, 561, 595, 630, 666, 703, 741, 780, 820, 861, 903, 946, 990, 1035,
+              1081, 1128, 1176, 1225, 1275, 1326, 1378, 1431, 1485, 1540, 1596, 1653, 1711, 1770, 1830, 1891, 1953,
+              2016, 2080, 2145, 2211, 2278, 2346, 2415, 2485, 2556, 2628, 2701, 2775, 2850, 2926, 3003, 3081, 3160,
+              3240, 3321, 3403, 3486, 3570, 3655, 3741, 3828, 3916, 4005, 4095, 4186, 4278, 4371, 4465, 4560, 4656,
+              4753, 4851, 4950, 5050]
 dynamodb = boto3.resource('dynamodb')
 todo_table = dynamodb.Table('todo')
 achieve_table = dynamodb.Table('achievement')
+user_table = dynamodb.Table('user')
+
 
 def upload_post(title, game_day, user_name):
-
     now_time = str(time.strftime('%c', time.localtime()))
 
-    item = {'createdDate':now_time, 'userName':user_name, 'title': title, 'gameDay': game_day}
-    todo_table.put_item(Item = item)
+    item = {'createdDate': now_time, 'userName': user_name, 'title': title, 'gameDay': game_day}
+    todo_table.put_item(Item=item)
 
     result = todo_table.query(
-        IndexName = "userName-index",
-        KeyConditionExpression = Key('userName').eq(user_name)
+        IndexName="userName-index",
+        KeyConditionExpression=Key('userName').eq(user_name)
     )
-    print(result)
 
-
-    print(len(positive_adjectives))
-    print(len(count_list))
     if result['Count'] <= 100 and result['Count'] in count_list:
         idx = count_list.index(result['Count'])
-        item = {'date':now_time, 'user':user_name, 'title':positive_adjectives[idx]}
+        item = {'date': now_time, 'user': user_name, 'title': positive_adjectives[idx]}
         achieve_table.put_item(Item=item)
 
 
@@ -137,5 +139,39 @@ def get_today_todo(game_day, user_name):
         KeyConditionExpression=Key('gameDay').eq(game_day)
     )
 
-    print(result)
     return result
+
+
+def login(username, password):
+    response = user_table.get_item(
+        Key={
+            "username": username,
+            "password": password
+        }
+    )
+
+    print(response)
+    try:
+        item = response['Item']
+        print(item)
+        return True
+    except KeyError:
+        return False
+
+
+def register(username, password):
+    user_table.put_item(
+        Item = {
+            'username' : username,
+            'password' : password
+        }
+    )
+
+
+def all_user():
+    result = user_table.scan()
+    response = []
+    for dic in result['Items']:
+        response.append({"username" : dic['username']})
+
+    return response
